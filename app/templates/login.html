@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Sign in — ShopCheck{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 360px; margin: 3rem auto;">
+  <h1>Sign in</h1>
+  <label for="username">Username</label>
+  <input id="username" data-testid="login-username" autocomplete="username">
+  <label for="password">Password</label>
+  <input id="password" data-testid="login-password" type="password" autocomplete="current-password">
+  <button id="login-btn" data-testid="login-submit" type="button">Sign in</button>
+  <p id="message" data-testid="login-error" class="error" role="alert"></p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  async function doLogin() {
+    const resp = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value,
+      }),
+    });
+    if (resp.ok) {
+      window.location.href = '/catalog';
+      return;
+    }
+    const body = await resp.json().catch(() => ({}));
+    document.getElementById('message').textContent =
+      typeof body.detail === 'string' ? body.detail : 'Sign-in failed';
+  }
+  document.getElementById('login-btn').addEventListener('click', doLogin);
+  document.getElementById('password').addEventListener('keydown',
+    (e) => { if (e.key === 'Enter') doLogin(); });
+</script>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Cart — ShopCheck{% endblock %}
+{% block content %}
+<h1>Your cart</h1>
+<div class="card">
+  <table id="cart-table" data-testid="cart-table">
+    <thead><tr><th>Product</th><th>Price</th><th>Qty</th><th>Line total</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <p id="empty" data-testid="cart-empty" class="muted" hidden>Your cart is empty.</p>
+  <p><strong id="cart-total" data-testid="cart-total"></strong></p>
+  <button id="place-order" data-testid="cart-checkout" type="button">Place order</button>
+  <p id="message" data-testid="cart-message" role="alert"></p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  function readCart() {
+    return JSON.parse(localStorage.getItem('shopcheck_cart') || '{}');
+  }
+
+  async function renderCart() {
+    const cart = readCart();
+    const ids = Object.keys(cart);
+    const tbody = document.querySelector('#cart-table tbody');
+    tbody.innerHTML = '';
+    document.getElementById('empty').hidden = ids.length > 0;
+    document.getElementById('place-order').disabled = ids.length === 0;
+    let total = 0;
+    for (const id of ids) {
+      const resp = await fetch('/api/products/' + id);
+      if (!resp.ok) continue;
+      const p = await resp.json();
+      const line = p.price * cart[id];
+      total += line;
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + p.name + '</td><td>$' + p.price.toFixed(2) +
+        '</td><td>' + cart[id] + '</td><td>$' + line.toFixed(2) +
+        '</td><td><button class="danger" type="button" data-testid="cart-remove-' + id +
+        '">Remove</button></td>';
+      tr.querySelector('button').addEventListener('click', () => {
+        const c = readCart();
+        delete c[id];
+        localStorage.setItem('shopcheck_cart', JSON.stringify(c));
+        renderCart();
+      });
+      tbody.appendChild(tr);
+    }
+    document.getElementById('cart-total').textContent =
+      ids.length ? 'Cart total (before discount): $' + total.toFixed(2) : '';
+  }
+
+  document.getElementById('place-order').addEventListener('click', async () => {
+    const cart = readCart();
+    const items = Object.entries(cart).map(([productId, quantity]) =>
+      ({product_id: parseInt(productId, 10), quantity}));
+    const resp = await fetch('/api/orders', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({items}),
+    });
+    const msg = document.getElementById('message');
+    if (resp.status === 201) {
+      localStorage.removeItem('shopcheck_cart');
+      window.location.href = '/orders';
+    } else {
+      const body = await resp.json().catch(() => ({}));
+      msg.className = 'error';
+      msg.textContent = typeof body.detail === 'string'
+        ? body.detail : 'Could not place the order.';
+    }
+  });
+
+  renderCart();
+</script>
+{% endblock %}

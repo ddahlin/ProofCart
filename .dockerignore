@@ -1,0 +1,7 @@
+data/
+__pycache__/
+**/__pycache__/
+.git/
+tests/
+GROUND_TRUTH.md
+.pytest_cache/

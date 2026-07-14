@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Orders — ShopCheck{% endblock %}
+{% block content %}
+<h1>{% if session.role == 'admin' %}All orders{% else %}Your orders{% endif %}</h1>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>{% if session.role == 'admin' %}<th>User</th>{% endif %}
+        <th>Status</th><th>Items</th><th>Subtotal</th><th>Discount</th>
+        <th>Total</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in orders %}
+      <tr data-testid="order-row-{{ o.id }}">
+        <td>{{ o.id }}</td>
+        {% if session.role == 'admin' %}<td>{{ o.user_id }}</td>{% endif %}
+        <td><span class="badge" data-testid="order-status-{{ o.id }}">{{ o.status.value }}</span></td>
+        <td class="muted">
+          {% for i in o.items %}{{ i.quantity }} × #{{ i.product_id }} @ ${{ '%.2f' | format(i.unit_price) }}{% if not loop.last %}, {% endif %}{% endfor %}
+        </td>
+        <td>${{ '%.2f' | format(o.subtotal) }}</td>
+        <td>${{ '%.2f' | format(o.discount) }}</td>
+        <td><strong>${{ '%.2f' | format(o.total) }}</strong></td>
+        <td>
+          {% if o.status.value in ('pending', 'paid') %}
+          <button class="danger" type="button" data-testid="order-cancel-{{ o.id }}" onclick="cancelOrder({{ o.id }})">Cancel</button>
+          {% endif %}
+          {% if session.role == 'admin' and o.status.value == 'pending' %}
+          <button type="button" data-testid="order-mark-paid-{{ o.id }}" onclick="setStatus({{ o.id }}, 'paid')">Mark paid</button>
+          {% endif %}
+          {% if session.role == 'admin' and o.status.value == 'paid' %}
+          <button type="button" data-testid="order-ship-{{ o.id }}" onclick="setStatus({{ o.id }}, 'shipped')">Ship</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if not orders %}<p class="muted" data-testid="orders-empty">No orders yet.</p>{% endif %}
+  <p id="message" data-testid="orders-message" class="error" role="alert"></p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  async function setStatus(orderId, status) {
+    const resp = await fetch('/api/orders/' + orderId + '/status', {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({status}),
+    });
+    if (resp.ok) {
+      window.location.reload();
+    } else {
+      const body = await resp.json().catch(() => ({}));
+      document.getElementById('message').textContent =
+        typeof body.detail === 'string' ? body.detail : 'Update failed.';
+    }
+  }
+  function cancelOrder(orderId) { setStatus(orderId, 'cancelled'); }
+</script>
+{% endblock %}

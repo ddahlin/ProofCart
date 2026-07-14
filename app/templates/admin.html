@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Admin — ShopCheck{% endblock %}
+{% block content %}
+<h1>Admin dashboard</h1>
+<p id="message" data-testid="admin-message" role="alert"></p>
+
+<div class="card">
+  <h2>Users</h2>
+  <table id="users-table" data-testid="admin-users-table">
+    <thead><tr><th>Id</th><th>Username</th><th>Role</th><th>Locked</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <h3>Create user</h3>
+  <div style="max-width: 320px;">
+    <label for="new-username">Username</label><input id="new-username" data-testid="admin-new-username">
+    <label for="new-password">Password</label><input id="new-password" data-testid="admin-new-password" type="password">
+    <label for="new-role">Role</label>
+    <select id="new-role" data-testid="admin-new-role"><option>customer</option><option>admin</option></select>
+    <button type="button" id="create-user" data-testid="admin-create-user">Create user</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Products</h2>
+  <table id="products-table" data-testid="admin-products-table">
+    <thead><tr><th>Id</th><th>Name</th><th>Price</th><th>Stock</th><th>Active</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <h3>Create product</h3>
+  <div style="max-width: 320px;">
+    <label for="p-name">Name</label><input id="p-name" data-testid="admin-p-name">
+    <label for="p-desc">Description</label><input id="p-desc" data-testid="admin-p-desc">
+    <label for="p-price">Price</label><input id="p-price" data-testid="admin-p-price" type="number" step="0.01">
+    <label for="p-stock">Stock</label><input id="p-stock" data-testid="admin-p-stock" type="number" value="0">
+    <button type="button" id="create-product" data-testid="admin-create-product">Create product</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Reports</h2>
+  <table id="reports-table" data-testid="admin-reports-table">
+    <thead><tr><th>Id</th><th>Title</th><th>Type</th><th>Range</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <h3>Create report</h3>
+  <div style="max-width: 320px;">
+    <label for="r-title">Title</label><input id="r-title" data-testid="admin-r-title">
+    <label for="r-type">Type</label>
+    <select id="r-type" data-testid="admin-r-type"><option>sales_summary</option><option>inventory</option></select>
+    <label for="r-from">From</label><input id="r-from" data-testid="admin-r-from" type="date">
+    <label for="r-to">To</label><input id="r-to" data-testid="admin-r-to" type="date">
+    <button type="button" id="create-report" data-testid="admin-create-report">Create report</button>
+  </div>
+  <pre id="report-payload" class="muted"></pre>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const msg = document.getElementById('message');
+
+  function fail(body) {
+    msg.className = 'error';
+    msg.textContent = typeof body.detail === 'string'
+      ? body.detail : JSON.stringify(body.detail || body);
+  }
+
+  async function api(path, options) {
+    const resp = await fetch(path, options);
+    if (resp.status === 204) return null;
+    const body = await resp.json().catch(() => ({}));
+    if (!resp.ok) { fail(body); throw new Error('request failed'); }
+    msg.textContent = '';
+    return body;
+  }
+
+  function json(method, body) {
+    return {method, headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)};
+  }
+
+  async function loadUsers() {
+    const users = await api('/api/users');
+    const tbody = document.querySelector('#users-table tbody');
+    tbody.innerHTML = '';
+    for (const u of users) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + u.id + '</td><td>' + u.username + '</td><td>' +
+        u.role + '</td><td>' + (u.is_locked ? 'yes' : 'no') + '</td>' +
+        '<td><button class="secondary" data-act="lock" type="button">' +
+        (u.is_locked ? 'Unlock' : 'Lock') + '</button> ' +
+        '<button class="danger" data-act="del" type="button">Delete</button></td>';
+      tr.querySelector('[data-act="lock"]').addEventListener('click', async () => {
+        await api('/api/users/' + u.id, json('PUT', {is_locked: !u.is_locked}));
+        loadUsers();
+      });
+      tr.querySelector('[data-act="del"]').addEventListener('click', async () => {
+        await api('/api/users/' + u.id, {method: 'DELETE'});
+        loadUsers();
+      });
+      tbody.appendChild(tr);
+    }
+  }
+
+  async function loadProducts() {
+    const products = await api('/api/products?include_inactive=true');
+    const tbody = document.querySelector('#products-table tbody');
+    tbody.innerHTML = '';
+    for (const p of products) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + p.id + '</td><td>' + p.name + '</td><td>$' +
+        p.price.toFixed(2) + '</td><td>' + p.stock + '</td><td>' +
+        (p.is_active ? 'yes' : 'no') + '</td>' +
+        '<td><button class="secondary" data-act="toggle" type="button">' +
+        (p.is_active ? 'Deactivate' : 'Activate') + '</button> ' +
+        '<button class="danger" data-act="del" type="button">Delete</button></td>';
+      tr.querySelector('[data-act="toggle"]').addEventListener('click', async () => {
+        await api('/api/products/' + p.id, json('PUT', {
+          name: p.name, description: p.description, price: p.price,
+          stock: p.stock, is_active: !p.is_active}));
+        loadProducts();
+      });
+      tr.querySelector('[data-act="del"]').addEventListener('click', async () => {
+        await api('/api/products/' + p.id, {method: 'DELETE'});
+        loadProducts();
+      });
+      tbody.appendChild(tr);
+    }
+  }
+
+  async function loadReports() {
+    const reports = await api('/api/reports');
+    const tbody = document.querySelector('#reports-table tbody');
+    tbody.innerHTML = '';
+    for (const r of reports) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + r.id + '</td><td>' + r.title + '</td><td>' +
+        r.type + '</td><td>' + r.date_from + ' → ' + r.date_to + '</td>' +
+        '<td><button class="secondary" data-act="view" type="button">View</button> ' +
+        '<button class="danger" data-act="del" type="button">Delete</button></td>';
+      tr.querySelector('[data-act="view"]').addEventListener('click', async () => {
+        const full = await api('/api/reports/' + r.id);
+        document.getElementById('report-payload').textContent =
+          JSON.stringify(full.payload, null, 2);
+      });
+      tr.querySelector('[data-act="del"]').addEventListener('click', async () => {
+        await api('/api/reports/' + r.id, {method: 'DELETE'});
+        loadReports();
+      });
+      tbody.appendChild(tr);
+    }
+  }
+
+  document.getElementById('create-user').addEventListener('click', async () => {
+    await api('/api/users', json('POST', {
+      username: document.getElementById('new-username').value,
+      password: document.getElementById('new-password').value,
+      role: document.getElementById('new-role').value,
+    }));
+    loadUsers();
+  });
+
+  document.getElementById('create-product').addEventListener('click', async () => {
+    await api('/api/products', json('POST', {
+      name: document.getElementById('p-name').value,
+      description: document.getElementById('p-desc').value,
+      price: parseFloat(document.getElementById('p-price').value),
+      stock: parseInt(document.getElementById('p-stock').value, 10),
+      is_active: true,
+    }));
+    loadProducts();
+  });
+
+  document.getElementById('create-report').addEventListener('click', async () => {
+    await api('/api/reports', json('POST', {
+      title: document.getElementById('r-title').value,
+      type: document.getElementById('r-type').value,
+      date_from: document.getElementById('r-from').value,
+      date_to: document.getElementById('r-to').value,
+    }));
+    loadReports();
+  });
+
+  loadUsers();
+  loadProducts();
+  loadReports();
+</script>
+{% endblock %}

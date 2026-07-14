@@ -1,0 +1,12 @@
+# Ephemeral runtime state (determinism comes from /api/reset, not persistence)
+data/*.db
+data/
+
+# Python caches
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# UI-model exporter output (regenerable build_artifact; canonical copy is
+# delivered into the QA repo's kb/product_knowledge/ui_model/)
+out/

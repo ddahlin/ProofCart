@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Catalog — ShopCheck{% endblock %}
+{% block content %}
+<h1>Product catalog</h1>
+<div class="grid">
+  {% for p in products %}
+  <div class="card" data-testid="catalog-product-{{ p.id }}">
+    <strong>{{ p.name }}</strong>
+    <p class="muted">{{ p.description }}</p>
+    <p><strong>${{ '%.2f' | format(p.price) }}</strong></p>
+    <p class="muted">{% if p.stock > 0 %}{{ p.stock }} in stock{% else %}Out of stock{% endif %}</p>
+    <div style="display:flex; gap:0.5rem;">
+      <label for="qty-{{ p.id }}" class="sr-only">Quantity</label>
+      <input type="number" min="1" max="10" value="1" id="qty-{{ p.id }}" data-testid="catalog-qty-{{ p.id }}" style="width:4.5rem; margin:0;">
+      <button type="button" data-testid="add-to-cart-{{ p.id }}" onclick="addToCart({{ p.id }})" {% if p.stock == 0 %}disabled{% endif %}>Add to cart</button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<p id="message" data-testid="catalog-message" class="ok" role="status"></p>
+{% endblock %}
+{% block scripts %}
+<script>
+  function addToCart(productId) {
+    const qty = parseInt(document.getElementById('qty-' + productId).value, 10) || 1;
+    const cart = JSON.parse(localStorage.getItem('shopcheck_cart') || '{}');
+    cart[productId] = (cart[productId] || 0) + qty;
+    localStorage.setItem('shopcheck_cart', JSON.stringify(cart));
+    document.getElementById('message').textContent = 'Added to cart.';
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,1436 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ShopCheck",
+    "description": "Internal e-commerce ordering portal: catalog, orders, user management, and reports.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "description": "Sign in with username and password.\n\nPositive scenario: a valid username/password pair returns 200, sets the\nsession cookie, and returns the user's id, username, and role.\n\nNegative scenarios: an unknown username or a wrong password returns 401;\na locked account returns 403 with detail \"Account locked\" even when the\npassword is correct; a body missing username or password returns 422.",
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unknown username or wrong password."
+          },
+          "403": {
+            "description": "The account is locked ('Account locked')."
+          },
+          "422": {
+            "description": "Malformed body: username or password missing."
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "description": "End the current session.\n\nPositive scenario: with a valid session cookie, returns 200 and clears\nthe session; subsequent authenticated calls return 401.\n\nNegative scenario: without an active session, returns 401.",
+        "operationId": "logout_api_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session to log out."
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "List Users",
+        "description": "List all user accounts (admin only).\n\nPositive scenario: an administrator receives every account with username,\nrole, and locked state.\n\nNegative scenarios: an anonymous caller receives 401; a signed-in\ncustomer receives 403.",
+        "operationId": "list_users_api_users_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Users Api Users Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated (no session or session expired)."
+          },
+          "403": {
+            "description": "Authenticated but not an administrator."
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Create User",
+        "description": "Create a user account (admin only).\n\nPositive scenario: a valid username, password, and role returns 201 and\nthe new user can sign in immediately.\n\nNegative scenarios: a duplicate username returns 409; a username or\npassword violating the business rules returns 422; anonymous callers get\n401 and customers get 403.",
+        "operationId": "create_user_api_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated (no session or session expired)."
+          },
+          "403": {
+            "description": "Authenticated but not an administrator."
+          },
+          "409": {
+            "description": "The username is already taken."
+          },
+          "422": {
+            "description": "Username violates BR-4 (3-20 chars, letters/digits/underscore) or password violates BR-5 (min 8 chars, a letter and a digit)."
+          }
+        }
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get Me",
+        "description": "Return the signed-in user's own profile.\n\nPositive scenario: any authenticated user (admin or customer) receives\ntheir own id, username, and role.\n\nNegative scenario: an anonymous caller receives 401.",
+        "operationId": "get_me_api_users_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated."
+          }
+        }
+      }
+    },
+    "/api/users/{user_id}": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get User",
+        "description": "Fetch a single user account by id (admin only).\n\nPositive scenario: an administrator requests an existing id and receives\nthe account.\n\nNegative scenarios: an unknown id returns 404; a non-integer id returns\n422; anonymous callers get 401 and customers get 403.",
+        "operationId": "get_user_api_users__user_id__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated (no session or session expired)."
+          },
+          "403": {
+            "description": "Authenticated but not an administrator."
+          },
+          "404": {
+            "description": "No user with this id."
+          },
+          "422": {
+            "description": "The id is not an integer."
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update User",
+        "description": "Update a user's password, role, or locked state (admin only).\n\nPositive scenario: an administrator locks an account or resets a\npassword and the change takes effect immediately.\n\nNegative scenarios: an unknown id returns 404; an invalid new password\nreturns 422; anonymous callers get 401 and customers get 403.",
+        "operationId": "update_user_api_users__user_id__put",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated (no session or session expired)."
+          },
+          "403": {
+            "description": "Authenticated but not an administrator."
+          },
+          "404": {
+            "description": "No user with this id."
+          },
+          "422": {
+            "description": "New password violates BR-5, or the id/role value is malformed."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Delete User",
+        "description": "Delete a user account (admin only).\n\nPositive scenario: deleting a user whose orders are all shipped or\ncancelled (or who has none) returns 204 and removes the account.\n\nNegative scenarios: a user with pending or paid orders returns 409 and\nis kept; an unknown id returns 404; anonymous callers get 401 and\ncustomers get 403.",
+        "operationId": "delete_user_api_users__user_id__delete",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated (no session or session expired)."
+          },
+          "403": {
+            "description": "Authenticated but not an administrator."
+          },
+          "404": {
+            "description": "No user with this id."
+          },
+          "409": {
+            "description": "The user still has pending or paid orders."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products": {
+      "get": {
+        "tags": [
+          "products"
+        ],
+        "summary": "List Products",
+        "description": "List the product catalog.\n\nPositive scenario: any caller receives the list of active products with\nname, description, price, and stock. An administrator may pass\n`?include_inactive=true` to also see inactive products.\n\nNegative scenario: for non-administrators the `include_inactive` flag is\nignored and only active products are returned.",
+        "operationId": "list_products_api_products_get",
+        "parameters": [
+          {
+            "name": "include_inactive",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Inactive"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProductOut"
+                  },
+                  "title": "Response List Products Api Products Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Create Product",
+        "description": "Create a product (admin only).\n\nPositive scenario: a valid name, description, price, and stock returns\n201 and the product appears in the catalog per its active flag.\n\nNegative scenarios: a price outside the allowed bounds or a name/\ndescription outside its length bounds returns 422; anonymous callers get\n401 and customers get 403.",
+        "operationId": "create_product_api_products_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated (no session or session expired)."
+          },
+          "403": {
+            "description": "Authenticated but not an administrator."
+          },
+          "422": {
+            "description": "Price outside $0.01-$9,999.99 (BR-6), name empty or over 100 chars, description over 500 chars, or negative stock."
+          }
+        }
+      }
+    },
+    "/api/products/{product_id}": {
+      "get": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Get Product",
+        "description": "Fetch one product by id.\n\nPositive scenario: an existing active product is returned to any caller;\nan inactive product is returned to an administrator.\n\nNegative scenarios: an unknown id returns 404; an inactive product\nrequested by a non-administrator also returns 404.",
+        "operationId": "get_product_api_products__product_id__get",
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Product Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No product with this id, or the product is inactive and the caller is not an administrator."
+          },
+          "422": {
+            "description": "The id is not an integer."
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Update Product",
+        "description": "Update a product (admin only).\n\nPositive scenario: an administrator edits price, stock, or the active\nflag and the change is visible on the next catalog read; prices already\ncaptured on existing orders are unaffected.\n\nNegative scenarios: an unknown id returns 404; out-of-bounds values\nreturn 422; anonymous callers get 401 and customers get 403.",
+        "operationId": "update_product_api_products__product_id__put",
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Product Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated (no session or session expired)."
+          },
+          "403": {
+            "description": "Authenticated but not an administrator."
+          },
+          "404": {
+            "description": "No product with this id."
+          },
+          "422": {
+            "description": "Price, name, description, or stock outside the allowed bounds."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Delete Product",
+        "description": "Delete a product (admin only).\n\nPositive scenario: deleting a product not referenced by any pending or\npaid order returns 204 and removes it permanently.\n\nNegative scenarios: a product referenced by an open order returns 409\nand is kept; an unknown id returns 404; anonymous callers get 401 and\ncustomers get 403.",
+        "operationId": "delete_product_api_products__product_id__delete",
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Product Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated (no session or session expired)."
+          },
+          "403": {
+            "description": "Authenticated but not an administrator."
+          },
+          "404": {
+            "description": "No product with this id."
+          },
+          "409": {
+            "description": "The product is referenced by pending or paid orders."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders": {
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "List Orders",
+        "description": "List orders visible to the caller.\n\nPositive scenarios: a customer receives only their own orders; an\nadministrator receives every order from every customer.\n\nNegative scenario: an anonymous caller receives 401.",
+        "operationId": "list_orders_api_orders_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OrderOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Orders Api Orders Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated (no session or session expired)."
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Create Order",
+        "description": "Place a new order.\n\nPositive scenario: a signed-in user submits 1-20 line items, each with\nquantity 1-10 of an in-stock product; the order is created as `pending`\nwith unit prices captured at this moment, and subtotal, discount (BR-1),\nand total computed automatically.\n\nNegative scenarios: an unknown product id returns 404; requesting more\nunits than the current stock returns 409 and creates nothing; a quantity\noutside 1-10 or an item count outside 1-20 returns 422.",
+        "operationId": "create_order_api_orders_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated."
+          },
+          "404": {
+            "description": "A line item references an unknown product."
+          },
+          "409": {
+            "description": "A line item asks for more units than are in stock (BR-3)."
+          },
+          "422": {
+            "description": "Quantity outside 1-10 (BR-2), more than 20 line items, or fewer than 1."
+          }
+        }
+      }
+    },
+    "/api/orders/{order_id}": {
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Get Order",
+        "description": "Fetch one order with its line items and amounts.\n\nPositive scenario: the order's owner (or any administrator) receives\nstatus, line items with captured unit prices, subtotal, discount, and\ntotal.\n\nNegative scenarios: a customer requesting another customer's order\nreceives 403; an unknown id returns 404; anonymous callers get 401.",
+        "operationId": "get_order_api_orders__order_id__get",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated."
+          },
+          "403": {
+            "description": "A customer requested an order they do not own."
+          },
+          "404": {
+            "description": "No order with this id."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/{order_id}/status": {
+      "patch": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Change Status",
+        "description": "Move an order through its lifecycle.\n\nLegal transitions: pending->paid (decrements stock), pending->cancelled,\npaid->shipped, paid->cancelled (restores stock).\n\nPositive scenario: an administrator pays a pending order; stock is\nreduced by each line item's quantity and the order becomes `paid`.\nA customer cancels their own pending or paid order.\n\nNegative scenarios: any other from/to pair (including repeating the\ncurrent status) returns 409 with detail \"Illegal transition <from> ->\n<to>\"; paying with insufficient stock returns 409, changes no stock, and\nleaves the order pending; a customer attempting any transition other\nthan cancelling their own order receives 403; an unknown status value\nreturns 422; an unknown order id returns 404.",
+        "operationId": "change_status_api_orders__order_id__status_patch",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated."
+          },
+          "403": {
+            "description": "Customers may only cancel their own orders; every other transition is admin-only."
+          },
+          "404": {
+            "description": "No order with this id."
+          },
+          "409": {
+            "description": "Illegal transition for the current status, or insufficient stock when paying (BR-3)."
+          },
+          "422": {
+            "description": "Unknown status value."
+          }
+        }
+      }
+    },
+    "/api/reports": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "List Reports",
+        "description": "List all reports (admin only).\n\nPositive scenario: an administrator receives every report with title,\ntype, date range, author, and creation time.\n\nNegative scenarios: an anonymous caller receives 401; a signed-in\ncustomer receives 403.",
+        "operationId": "list_reports_api_reports_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReportOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Reports Api Reports Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated (no session or session expired)."
+          },
+          "403": {
+            "description": "Authenticated but not an administrator (BR-9)."
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Create Report",
+        "description": "Create a report (admin only).\n\nPositive scenario: an administrator submits a title, a type\n(sales_summary or inventory), and a valid date range; the figures are\ncomputed from the data at this moment and stored with the report.\n\nNegative scenarios: a date range whose start is after its end returns\n422; an unknown type returns 422; anonymous callers get 401 and\ncustomers get 403.",
+        "operationId": "create_report_api_reports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated (no session or session expired)."
+          },
+          "403": {
+            "description": "Authenticated but not an administrator (BR-9)."
+          },
+          "422": {
+            "description": "date_from is after date_to, the type is not sales_summary/inventory, or the title is empty or over 100 chars."
+          }
+        }
+      }
+    },
+    "/api/reports/{report_id}": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Get Report",
+        "description": "Fetch one report with its stored payload (admin only).\n\nPositive scenario: an administrator opens an existing report and sees\nthe figures computed at creation time.\n\nNegative scenarios: an unknown id returns 404; anonymous callers get\n401 and customers get 403.",
+        "operationId": "get_report_api_reports__report_id__get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated (no session or session expired)."
+          },
+          "403": {
+            "description": "Authenticated but not an administrator (BR-9)."
+          },
+          "404": {
+            "description": "No report with this id."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Delete Report",
+        "description": "Delete a report (admin only).\n\nPositive scenario: deleting an existing report returns 204 and it\ndisappears from the list immediately.\n\nNegative scenarios: an unknown id returns 404; anonymous callers get\n401 and customers get 403.",
+        "operationId": "delete_report_api_reports__report_id__delete",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated (no session or session expired)."
+          },
+          "403": {
+            "description": "Authenticated but not an administrator (BR-9)."
+          },
+          "404": {
+            "description": "No report with this id."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reset": {
+      "post": {
+        "tags": [
+          "test-support"
+        ],
+        "summary": "Reset",
+        "description": "Restore the canonical seed data (test facility).\n\nPositive scenario: any caller, authenticated or not, receives 200 with\n{\"status\": \"reset\"} and the database is returned to its standard seed\nstate (users, products, orders, reports with fixed ids).\n\nNegative scenarios: none \u2014 this endpoint is intentionally unrestricted\nand is only deployed to test environments.",
+        "operationId": "reset_api_reset_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoginOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "role"
+        ],
+        "title": "LoginOut"
+      },
+      "LoginRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "OrderCreate": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderItemIn"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "OrderCreate"
+      },
+      "OrderItemIn": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "quantity": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "quantity"
+        ],
+        "title": "OrderItemIn"
+      },
+      "OrderItemOut": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "unit_price": {
+            "type": "number",
+            "title": "Unit Price"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "quantity",
+          "unit_price"
+        ],
+        "title": "OrderItemOut"
+      },
+      "OrderOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "integer",
+            "title": "User Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "subtotal": {
+            "type": "number",
+            "title": "Subtotal"
+          },
+          "discount": {
+            "type": "number",
+            "title": "Discount"
+          },
+          "total": {
+            "type": "number",
+            "title": "Total"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "status",
+          "items",
+          "subtotal",
+          "discount",
+          "total",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "OrderOut"
+      },
+      "OrderStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "paid",
+          "shipped",
+          "cancelled"
+        ],
+        "title": "OrderStatus"
+      },
+      "ProductIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Description",
+            "default": ""
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 9999.99,
+                "minimum": 0.01
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
+              }
+            ],
+            "title": "Price"
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Stock"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "price",
+          "stock"
+        ],
+        "title": "ProductIn"
+      },
+      "ProductOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "price": {
+            "type": "number",
+            "title": "Price"
+          },
+          "stock": {
+            "type": "integer",
+            "title": "Stock"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "price",
+          "stock",
+          "is_active"
+        ],
+        "title": "ProductOut"
+      },
+      "ReportCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ReportType"
+          },
+          "date_from": {
+            "type": "string",
+            "format": "date",
+            "title": "Date From"
+          },
+          "date_to": {
+            "type": "string",
+            "format": "date",
+            "title": "Date To"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "type",
+          "date_from",
+          "date_to"
+        ],
+        "title": "ReportCreate"
+      },
+      "ReportOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ReportType"
+          },
+          "date_from": {
+            "type": "string",
+            "title": "Date From"
+          },
+          "date_to": {
+            "type": "string",
+            "title": "Date To"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "created_by": {
+            "type": "integer",
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "type",
+          "date_from",
+          "date_to",
+          "payload",
+          "created_by",
+          "created_at"
+        ],
+        "title": "ReportOut"
+      },
+      "ReportType": {
+        "type": "string",
+        "enum": [
+          "sales_summary",
+          "inventory"
+        ],
+        "title": "ReportType"
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "admin",
+          "customer"
+        ],
+        "title": "Role"
+      },
+      "StatusChange": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StatusChange"
+      },
+      "StatusOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StatusOut"
+      },
+      "UserCreate": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 3,
+            "pattern": "^[A-Za-z0-9_]+$",
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role",
+            "default": "customer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "UserCreate"
+      },
+      "UserOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "is_locked": {
+            "type": "boolean",
+            "title": "Is Locked"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "role",
+          "is_locked",
+          "created_at"
+        ],
+        "title": "UserOut"
+      },
+      "UserUpdate": {
+        "properties": {
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_locked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Locked"
+          }
+        },
+        "type": "object",
+        "title": "UserUpdate"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

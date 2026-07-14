@@ -1,0 +1,103 @@
+# ---------------------------------------------------------------------------
+# UI-model route + state-recipe manifest  (hand-maintained seam)
+# ---------------------------------------------------------------------------
+# This is the ONE hand-authored input to tools/export_ui_model.py. It maps each
+# page object to the route to GET, the auth/state recipe needed to render it,
+# and any conditional-element recipes. Derived from the running app (app/main.py
+# UI routes) and the deterministic seed (app/seed.py).
+#
+# SAFETY: recipes authenticate only as `standard_user` or `admin`. Never
+# `problem_user` — the exporter hard-refuses any recipe naming it (the model
+# must reflect the clean, handler-present UI, never a planted imperfection).
+#
+# `template_entity` names the closed set that a page's per-item testids
+# (`<base>-<id>`) are keyed on. The exporter collapses those into
+# `element_templates`, resolving `<id>` against the seeded id set for that
+# entity. `scope: header` extracts the shared <header> nav; the default
+# `scope: main` extracts the <main> content region.
+
+base_url_key: SHOPCHECK_BASE_URL
+
+pages:
+  # Shared header/nav (rendered on every authenticated page). Extracted once as
+  # admin so every nav link — including the admin-only one — is captured.
+  - page_object: AppHeader
+    url_path_key: catalog          # header is reachable from any authed page
+    route: /catalog
+    description: >-
+      Shared top navigation bar rendered on every authenticated page: catalog,
+      cart, orders, admin links and the log-out button.
+    scope: header
+    shared: true
+    recipe:
+      auth: admin
+
+  - page_object: LoginPage
+    url_path_key: login
+    route: /login
+    description: >-
+      The sign-in page: a username field, a password field, a submit button,
+      and an inline error banner shown after a failed attempt.
+    scope: main
+    recipe:
+      auth: anonymous
+    # Render the conditional error banner via the POST-bad-creds recipe first.
+    pre:
+      - method: POST
+        path: /api/auth/login
+        json: {username: "no_such_user", password: "wrongpass9"}
+        expect_status: 401
+    conditional:
+      - login-error
+
+  - page_object: CatalogPage
+    url_path_key: catalog
+    route: /catalog
+    description: >-
+      The product catalog: one card per active product with a quantity field
+      and an add-to-cart button, plus a status message line.
+    scope: main
+    recipe:
+      auth: standard_user
+    template_entity: product
+
+  - page_object: CartPage
+    url_path_key: cart
+    route: /cart
+    description: >-
+      The shopping cart: the line-item table, the running total, and the
+      place-order button, plus a message line.
+    scope: main
+    recipe:
+      auth: standard_user
+
+  - page_object: OrdersPage
+    url_path_key: orders
+    route: /orders
+    description: >-
+      The order history table: one row per order with a status badge and a
+      cancel action for open orders.
+    scope: main
+    recipe:
+      auth: standard_user
+    template_entity: order
+
+  - page_object: AdminDashboardPage
+    url_path_key: admin
+    route: /admin
+    description: >-
+      The admin dashboard: users, products, and reports tables, each with a
+      create form, plus a message line.
+    scope: main
+    recipe:
+      auth: admin
+
+# Entity → closed-set binding for per-item element templates. `param_source` is
+# a dotted path the QA loader resolves against test_data.yaml.
+entities:
+  product:
+    param: product_id
+    param_source: test_data.products[].id
+  order:
+    param: order_id
+    param_source: test_data.orders[].id
