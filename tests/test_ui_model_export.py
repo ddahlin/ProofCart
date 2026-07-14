@@ -183,6 +183,21 @@ def test_7_closed_enum_only(seeded, tmp_path):
                 check(tdef["fallback"])
 
 
+# 9 — Drift guard: the rendered model must match the committed reference snapshot.
+def test_9_model_matches_committed_reference(seeded):
+    assert X.REFERENCE_FILE.exists(), (
+        "missing tools/ui_model_reference.yaml — generate it with "
+        "`python tools/export_ui_model.py --write-reference`")
+    manifest, pages, td, _ent, _gaps = X.build_model(allow_dirty=True)
+    current = X.structural_view(manifest, pages, td)
+    reference = yaml.safe_load(X.REFERENCE_FILE.read_text())
+    assert current == reference, (
+        "UI model drifted from the committed reference — a template/route change was "
+        "not re-exported. If the change is intended, regenerate and commit:\n"
+        "    python tools/export_ui_model.py --write-reference\n"
+        "    python tools/export_ui_model.py --dest <qa_repo>/kb/product_knowledge/ui_model")
+
+
 # 8 — Existing defect logic is untouched by instrumentation (D1–D4 intact).
 def test_8_defects_untouched_by_instrumentation():
     assert defects.D1_PRODUCT_ID == 7

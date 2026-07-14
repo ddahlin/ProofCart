@@ -61,6 +61,13 @@ if str(REPO_ROOT) not in sys.path:
 APP_ID = "shopcheck"
 DISPLAY_NAME = "ShopCheck"
 ROUTES_FILE = Path(__file__).resolve().parent / "ui_model_routes.yaml"
+# Committed structural snapshot of the model (volatile source_sha/generated_at
+# excluded). The drift-guard test regenerates and compares against this; a
+# template/route change that isn't re-exported turns that test red.
+REFERENCE_FILE = Path(__file__).resolve().parent / "ui_model_reference.yaml"
+# Manifest fields that legitimately change every run — excluded from the
+# structural view so a fresh SHA/timestamp never trips the drift guard.
+_VOLATILE_MANIFEST_FIELDS = ("source_sha", "generated_at")
 
 # ── The closed `by:` enum (this IS the locator policy; CSS/XPath deliberately
 # absent). Mirrors rag/ui_model.LOCATOR_METHODS in the QA repo. ────────────────
@@ -562,6 +569,31 @@ def validate_model(manifest: dict, pages: dict, test_data: dict) -> list[str]:
 
 # ── Serialization + emit ────────────────────────────────────────────────────────
 
+def structural_view(manifest: dict, pages: dict, test_data: dict) -> dict:
+    """The drift-comparable model: everything that describes UI structure, with
+    the volatile manifest fields (source_sha, generated_at) stripped. Round-tripped
+    through YAML so the shape matches a value loaded from the reference file."""
+    stable_manifest = {k: v for k, v in manifest.items()
+                       if k not in _VOLATILE_MANIFEST_FIELDS}
+    view = {"manifest": stable_manifest, "pages": pages, "test_data": test_data}
+    return yaml.safe_load(yaml.safe_dump(view, sort_keys=True, allow_unicode=True))
+
+
+def write_reference(path: Path = REFERENCE_FILE, *, allow_dirty: bool = True) -> dict:
+    """Regenerate the committed structural reference snapshot. Run this whenever a
+    legitimate template/route change is made, then commit the updated file."""
+    manifest, pages, test_data, _ent, _gaps = build_model(allow_dirty)
+    view = structural_view(manifest, pages, test_data)
+    path.write_text(
+        "# AUTO-GENERATED structural snapshot of the ShopCheck UI model.\n"
+        "# Regenerate with: python tools/export_ui_model.py --write-reference\n"
+        "# The drift-guard test (tests/test_ui_model_export.py) fails if the app's\n"
+        "# rendered structure diverges from this file. Do not hand-edit.\n"
+        + yaml.safe_dump(view, sort_keys=True, allow_unicode=True, default_flow_style=False),
+        encoding="utf-8")
+    return view
+
+
 def _dump(data: dict) -> str:
     return yaml.safe_dump(data, sort_keys=False, allow_unicode=True, default_flow_style=False)
 
@@ -651,7 +683,19 @@ def main(argv: Optional[list[str]] = None) -> int:
                          "(e.g. <qa_repo>/kb/product_knowledge/ui_model/).")
     ap.add_argument("--allow-dirty", action="store_true",
                     help="Permit a dirty/no-git tree; stamps source_sha with a -dirty suffix.")
+    ap.add_argument("--write-reference", action="store_true",
+                    help="Regenerate the committed drift-guard snapshot "
+                         "(tools/ui_model_reference.yaml) instead of exporting.")
     args = ap.parse_args(argv)
+
+    if args.write_reference:
+        try:
+            write_reference(allow_dirty=True)
+        except ExportError as e:
+            print(f"❌ reference write aborted: {e}", file=sys.stderr)
+            return 1
+        print(f"✅ drift-guard reference written to {REFERENCE_FILE}")
+        return 0
 
     try:
         summary = export(Path(args.out), allow_dirty=args.allow_dirty,

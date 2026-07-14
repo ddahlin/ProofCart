@@ -1,0 +1,394 @@
+# AUTO-GENERATED structural snapshot of the ShopCheck UI model.
+# Regenerate with: python tools/export_ui_model.py --write-reference
+# The drift-guard test (tests/test_ui_model_export.py) fails if the app's
+# rendered structure diverges from this file. Do not hand-edit.
+manifest:
+  app_id: shopcheck
+  base_url_key: SHOPCHECK_BASE_URL
+  display_name: ShopCheck
+  schema_version: 1
+  source_type: build_artifact
+pages:
+  AdminDashboardPage:
+    description: 'The admin dashboard: users, products, and reports tables, each with
+      a create form, plus a message line.'
+    elements:
+      admin_create_product:
+        fallback:
+          by: getByTestId
+          value: admin-create-product
+        preferred:
+          by: getByRole
+          name: Create product
+          role: button
+      admin_create_report:
+        fallback:
+          by: getByTestId
+          value: admin-create-report
+        preferred:
+          by: getByRole
+          name: Create report
+          role: button
+      admin_create_user:
+        fallback:
+          by: getByTestId
+          value: admin-create-user
+        preferred:
+          by: getByRole
+          name: Create user
+          role: button
+      admin_message:
+        fallback:
+          by: getByTestId
+          value: admin-message
+        preferred:
+          by: getByRole
+          role: alert
+      admin_new_password:
+        fallback:
+          by: getByTestId
+          value: admin-new-password
+        preferred:
+          by: getByLabel
+          value: Password
+      admin_new_role:
+        fallback:
+          by: getByTestId
+          value: admin-new-role
+        preferred:
+          by: getByLabel
+          value: Role
+      admin_new_username:
+        fallback:
+          by: getByTestId
+          value: admin-new-username
+        preferred:
+          by: getByLabel
+          value: Username
+      admin_p_desc:
+        fallback:
+          by: getByTestId
+          value: admin-p-desc
+        preferred:
+          by: getByLabel
+          value: Description
+      admin_p_name:
+        fallback:
+          by: getByTestId
+          value: admin-p-name
+        preferred:
+          by: getByLabel
+          value: Name
+      admin_p_price:
+        fallback:
+          by: getByTestId
+          value: admin-p-price
+        preferred:
+          by: getByLabel
+          value: Price
+      admin_p_stock:
+        fallback:
+          by: getByTestId
+          value: admin-p-stock
+        preferred:
+          by: getByLabel
+          value: Stock
+      admin_products_table:
+        preferred:
+          by: getByTestId
+          value: admin-products-table
+      admin_r_from:
+        fallback:
+          by: getByTestId
+          value: admin-r-from
+        preferred:
+          by: getByLabel
+          value: From
+      admin_r_title:
+        fallback:
+          by: getByTestId
+          value: admin-r-title
+        preferred:
+          by: getByLabel
+          value: Title
+      admin_r_to:
+        fallback:
+          by: getByTestId
+          value: admin-r-to
+        preferred:
+          by: getByLabel
+          value: To
+      admin_r_type:
+        fallback:
+          by: getByTestId
+          value: admin-r-type
+        preferred:
+          by: getByLabel
+          value: Type
+      admin_reports_table:
+        preferred:
+          by: getByTestId
+          value: admin-reports-table
+      admin_users_table:
+        preferred:
+          by: getByTestId
+          value: admin-users-table
+    page_object: AdminDashboardPage
+    url_path_key: admin
+  AppHeader:
+    description: 'Shared top navigation bar rendered on every authenticated page:
+      catalog, cart, orders, admin links and the log-out button.'
+    elements:
+      nav_admin:
+        fallback:
+          by: getByTestId
+          value: nav-admin
+        preferred:
+          by: getByRole
+          name: Admin
+          role: link
+      nav_cart:
+        fallback:
+          by: getByTestId
+          value: nav-cart
+        preferred:
+          by: getByRole
+          name: Cart
+          role: link
+      nav_catalog:
+        fallback:
+          by: getByTestId
+          value: nav-catalog
+        preferred:
+          by: getByRole
+          name: Catalog
+          role: link
+      nav_logout:
+        fallback:
+          by: getByTestId
+          value: nav-logout
+        preferred:
+          by: getByRole
+          name: Log out
+          role: button
+      nav_orders:
+        fallback:
+          by: getByTestId
+          value: nav-orders
+        preferred:
+          by: getByRole
+          name: Orders
+          role: link
+    page_object: AppHeader
+    shared: true
+    url_path_key: catalog
+  CartPage:
+    description: 'The shopping cart: the line-item table, the running total, and the
+      place-order button, plus a message line.'
+    elements:
+      cart_checkout:
+        fallback:
+          by: getByTestId
+          value: cart-checkout
+        preferred:
+          by: getByRole
+          name: Place order
+          role: button
+      cart_empty:
+        preferred:
+          by: getByTestId
+          value: cart-empty
+      cart_message:
+        fallback:
+          by: getByTestId
+          value: cart-message
+        preferred:
+          by: getByRole
+          role: alert
+      cart_table:
+        preferred:
+          by: getByTestId
+          value: cart-table
+      cart_total:
+        preferred:
+          by: getByTestId
+          value: cart-total
+    page_object: CartPage
+    url_path_key: cart
+  CatalogPage:
+    description: 'The product catalog: one card per active product with a quantity
+      field and an add-to-cart button, plus a status message line.'
+    element_templates:
+      add_to_cart:
+        conditional: false
+        param: product_id
+        param_source: test_data.products[].id
+        preferred:
+          by: getByTestId
+          value: add-to-cart-{product_id}
+      catalog_product:
+        conditional: false
+        param: product_id
+        param_source: test_data.products[].id
+        preferred:
+          by: getByTestId
+          value: catalog-product-{product_id}
+      catalog_qty:
+        conditional: false
+        param: product_id
+        param_source: test_data.products[].id
+        preferred:
+          by: getByTestId
+          value: catalog-qty-{product_id}
+    elements:
+      catalog_message:
+        fallback:
+          by: getByTestId
+          value: catalog-message
+        preferred:
+          by: getByRole
+          role: status
+    page_object: CatalogPage
+    url_path_key: catalog
+  LoginPage:
+    description: 'The sign-in page: a username field, a password field, a submit button,
+      and an inline error banner shown after a failed attempt.'
+    elements:
+      login_error:
+        conditional: true
+        fallback:
+          by: getByTestId
+          value: login-error
+        preferred:
+          by: getByRole
+          role: alert
+      login_password:
+        fallback:
+          by: getByTestId
+          value: login-password
+        preferred:
+          by: getByLabel
+          value: Password
+      login_submit:
+        fallback:
+          by: getByTestId
+          value: login-submit
+        preferred:
+          by: getByRole
+          name: Sign in
+          role: button
+      login_username:
+        fallback:
+          by: getByTestId
+          value: login-username
+        preferred:
+          by: getByLabel
+          value: Username
+    page_object: LoginPage
+    url_path_key: login
+  OrdersPage:
+    description: 'The order history table: one row per order with a status badge and
+      a cancel action for open orders.'
+    element_templates:
+      order_cancel:
+        conditional: false
+        param: order_id
+        param_source: test_data.orders[].id
+        preferred:
+          by: getByTestId
+          value: order-cancel-{order_id}
+      order_row:
+        conditional: false
+        param: order_id
+        param_source: test_data.orders[].id
+        preferred:
+          by: getByTestId
+          value: order-row-{order_id}
+      order_status:
+        conditional: false
+        param: order_id
+        param_source: test_data.orders[].id
+        preferred:
+          by: getByTestId
+          value: order-status-{order_id}
+    elements:
+      orders_message:
+        fallback:
+          by: getByTestId
+          value: orders-message
+        preferred:
+          by: getByRole
+          role: alert
+    page_object: OrdersPage
+    url_path_key: orders
+test_data:
+  orders:
+  - id: 1
+    status: pending
+  - id: 2
+    status: paid
+  - id: 3
+    status: shipped
+  - id: 4
+    status: cancelled
+  - id: 5
+    status: pending
+  - id: 6
+    status: paid
+  - id: 7
+    status: shipped
+  - id: 8
+    status: paid
+  products:
+  - id: 1
+    name: Penny Sticker
+    slug: penny-sticker
+  - id: 2
+    name: Flagship Workstation
+    slug: flagship-workstation
+  - id: 3
+    name: Wireless Mouse
+    slug: wireless-mouse
+  - id: 4
+    name: Mechanical Keyboard
+    slug: mechanical-keyboard
+  - id: 5
+    name: USB-C Hub
+    slug: usb-c-hub
+  - id: 6
+    name: Monitor Stand
+    slug: monitor-stand
+  - id: 7
+    name: Desk Lamp
+    slug: desk-lamp
+  - id: 8
+    name: Laptop Sleeve
+    slug: laptop-sleeve
+  - id: 9
+    name: Gaming Headset
+    slug: gaming-headset
+  - id: 10
+    name: HD Webcam
+    slug: hd-webcam
+  - id: 11
+    name: Retro Gamepad
+    slug: retro-gamepad
+  - id: 12
+    name: Pocket Notebook
+    slug: pocket-notebook
+  users:
+    admin:
+      behavior: test account
+      username_key: SHOPCHECK_ADMIN
+    locked_out_user:
+      behavior: test account
+      username_key: SHOPCHECK_LOCKED_OUT_USER
+    new_customer:
+      behavior: test account
+      username_key: SHOPCHECK_NEW_CUSTOMER
+    problem_user:
+      behavior: test account
+      username_key: SHOPCHECK_PROBLEM_USER
+    standard_user:
+      behavior: test account
+      username_key: SHOPCHECK_STANDARD_USER
