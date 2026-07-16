@@ -83,6 +83,27 @@ curl -X POST localhost:8000/api/reset  # restore deterministic seed data
      against an embedded copy of the frozen schema; the cross-repo
      `kb_manager.py ui-model validate shopcheck` is the final acceptance check.
 
+## Playwright harness (`e2e/`) — human-authored vs generated boundary
+
+9. **`e2e/` is the human-authored Playwright harness (UI + API); `pytest`
+   owns `tests/`, Playwright owns `e2e/` — they never interact.**
+   - Machine-generated specs go **only** in `e2e/tests/generated/<area>/` and
+     are never hand-edited; everything else under `e2e/` (config, fixtures,
+     page objects, smoke specs) is human-authored infrastructure and is never
+     machine-edited.
+   - The fixture vocabulary (`reset_state`, `login_as:<admin|standard_user|
+     problem_user>`) and the three persona tiers documented in `e2e/README.md`
+     are a frozen contract with the spec generator — do not rename fixtures or
+     add a session fixture for `locked_out_user`/`new_customer`.
+   - Locators derive from the UI-model export: never hand-write selectors in
+     `e2e/pages/`; after a template/route change re-export the model, then run
+     `npm run generate:locators` (commits `e2e/locators.generated.ts`).
+   - `workers: 1` / `fullyParallel: false` in `e2e/playwright.config.ts` is a
+     hard requirement of the shared SQLite DB + per-test `/api/reset` — never
+     parallelize it.
+   - Harness changes must keep `pytest -q` fully green and follow rule 4
+     (no business-rule literals in fixtures; credentials only via env keys).
+
 ## `data-testid` naming convention (for exporter-stable locators)
 
 kebab-case, semantic, page-scoped. Interactive/asserted elements carry a

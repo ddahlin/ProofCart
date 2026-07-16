@@ -1,0 +1,19 @@
+{
+  "name": "shopcheck-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Human-authored Playwright harness (UI + API) for ShopCheck. Generated specs land in tests/generated/.",
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test tests/smoke",
+    "test:list": "playwright test --list",
+    "generate:locators": "node scripts/generate-locators.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.0",
+    "@types/node": "^24.0.0",
+    "dotenv": "^16.4.5",
+    "typescript": "^5.9.3",
+    "yaml": "^2.5.0"
+  }
+}

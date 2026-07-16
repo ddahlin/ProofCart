@@ -10,3 +10,10 @@ __pycache__/
 # UI-model exporter output (regenerable build_artifact; canonical copy is
 # delivered into the QA repo's kb/product_knowledge/ui_model/)
 out/
+
+# Playwright harness (e2e/) — Node toolchain + run artifacts.
+# package.json / package-lock.json / locators.generated.ts ARE committed.
+node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/.env
