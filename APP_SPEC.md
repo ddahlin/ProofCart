@@ -165,7 +165,10 @@ These exact values must appear in `docs/BRD.md` and be implemented in
 - **BR-7 (cancellation window):** An order may be cancelled only from `pending`
   or `paid`. Cancelling a `paid` order restores stock.
 - **BR-8 (locked accounts):** A locked account cannot log in → `403` with
-  message "Account locked".
+  message "Account locked". **Credential-vs-lock precedence:** credentials are
+  validated first, so `403` is returned **only when the supplied password is
+  otherwise valid**; a locked account given an **invalid** password returns
+  `401` (invalid credentials), which takes precedence over `403`.
 - **BR-9 (reports access):** Reports are admin-only. Any `/api/reports*` access
   by a customer → `403`.
 - **BR-10 — DELIBERATELY UNDER-SPECIFIED (BRD only, DO NOT IMPLEMENT):** the
@@ -201,7 +204,9 @@ Transitions are performed via `PATCH /api/orders/{id}/status` with body
 ## 6. Authentication, sessions, and roles
 
 - `POST /api/auth/login` — body `{username, password}`. Success → `200`, sets
-  session cookie. Bad credentials → `401`. Locked account → `403` (BR-8).
+  session cookie. Bad credentials → `401` (takes precedence — an invalid
+  password on a locked account still returns `401`). Locked account with an
+  otherwise-valid password → `403` (BR-8).
 - `POST /api/auth/logout` — `200`, clears session.
 - **Session TTL: implement 15 minutes of inactivity** (this matches the HLD;
   see §14 — the BRD will deliberately say something different. Implement the
@@ -225,7 +230,7 @@ into docstrings — they become the spec text).
 
 | Endpoint | Method | Success | Documented errors |
 |---|---|---|---|
-| `/api/auth/login` | POST | 200 | 401 bad creds · 403 locked · 422 malformed body |
+| `/api/auth/login` | POST | 200 | 401 bad creds (precedence over 403) · 403 locked (valid creds only) · 422 malformed body |
 | `/api/auth/logout` | POST | 200 | 401 no session |
 | `/api/users` | GET (admin) | 200 | 401 · 403 non-admin |
 | `/api/users` | POST (admin) | 201 | 401 · 403 · 409 duplicate username · 422 BR-4/BR-5 |

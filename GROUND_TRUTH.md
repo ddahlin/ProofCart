@@ -171,3 +171,23 @@ are registered:
   $4.99/200.
 - `PUT /api/users/{id}` accepts only password/role/is_locked (usernames are
   immutable), keeping its documented status codes exact.
+
+### 5.4 Login credential-vs-lock precedence (FR-3 / BR-8 collision)
+
+- **The one collision BR-8 never explicitly ranked:** a sign-in attempt against
+  a **locked account** that **also supplies an invalid password**. FR-3 and BR-8
+  state "locked account → `403` (Account locked)" but do not rank `403`-locked
+  against `401`-bad-credentials for this case.
+- **Answer-key rule (narrow):** credentials are validated **first**, so
+  `POST /api/auth/login` returns **`401` (invalid credentials)** whenever the
+  password is wrong — *including* on a locked account. `403` "Account locked" is
+  reached **only when the password is otherwise valid**. In one line: *401
+  (bad credentials) takes precedence; `403`-locked applies only to an
+  otherwise-valid login against a locked account.*
+- **This is not a broadening to "locked → `401` everywhere."** A locked account
+  with the **correct** password still returns `403`, exactly as BR-8 says.
+- **Consistent with the app (docs corrected to match behavior, not vice versa):**
+  `app/routers/auth.py::login` checks the password before the `is_locked` flag
+  (`401` on credential failure, then `403` on lock). No defect, seed, or oracle
+  behavior is involved or changed. `docs/openapi.json` (login description) and
+  `APP_SPEC.md` (BR-8, §6, §7 endpoint table) encode the same precedence.
