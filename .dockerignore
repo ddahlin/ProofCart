@@ -3,5 +3,12 @@ __pycache__/
 **/__pycache__/
 .git/
 tests/
-GROUND_TRUTH.md
 .pytest_cache/
+
+# Build/eval layer — not needed by the runtime image. APP_SPEC.md and CLAUDE.md
+# document the planted defects (D1–D4), so they must never ride along in a
+# published image; e2e/ is the Node/Playwright harness, not runtime code.
+APP_SPEC.md
+CLAUDE.md
+GROUND_TRUTH.md
+e2e/
