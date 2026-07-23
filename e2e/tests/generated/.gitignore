@@ -1,5 +1,0 @@
-# Generated Playwright specs — emitted into these directories by the QA artifact
-# generator's `--generate-specs … --dest <shopcheck>/e2e/tests/generated/` step.
-# They are deterministic, regenerable output (not human-authored) and are never
-# committed; the per-area `.gitkeep` files keep the directory structure tracked.
-*.spec.ts
