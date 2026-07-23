@@ -27,6 +27,9 @@ jobs:
   e2e-generated:
     name: Gate — generated Playwright suite
     runs-on: ubuntu-latest
+    # The SHOPCHECK_* seed credentials are stored as *environment* secrets under
+    # the `beta` environment; a job must claim the environment to read them.
+    environment: beta
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
