@@ -5,6 +5,12 @@ on:
     branches: [main]
   # Also build immutable images for release tags, e.g. v1.2.3
   # tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      push_image:
+        description: "Also build & push the image (unchecked = run the gate/tests only)"
+        type: boolean
+        default: false
 
 # If several commits land on main quickly, only finish the newest build.
 concurrency:
@@ -109,6 +115,9 @@ jobs:
   build-and-push:
     name: Build and push image
     needs: [e2e-generated]
+    # A real push to main always publishes. A manual run only publishes if you
+    # ticked "push_image" — so a manual dispatch is a gate/test run by default.
+    if: ${{ github.event_name == 'push' || inputs.push_image }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
