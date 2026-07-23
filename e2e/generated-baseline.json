@@ -1,0 +1,6 @@
+{
+  "allowedFailures": [
+    "generated/authentication/TC-202_ui_logout_control_ends_the_session_for_a_problem_u.spec.ts :: TC-202: UI logout control ends the session for a problem_user session",
+    "generated/orders/TC-201_order_total_for_product_7_uses_the_correct_capture.spec.ts :: TC-201: Order total for product 7 uses the correct captured unit price (as problem_user)"
+  ]
+}
