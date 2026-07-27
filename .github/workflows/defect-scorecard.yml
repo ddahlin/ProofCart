@@ -1,0 +1,239 @@
+name: defect-scorecard
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Closes the DEFECT_MODE gap.
+#
+# `deploy.yml`'s `e2e-generated` gate runs the generated suite in CLEAN mode only.
+# The D1-D4 catches — the thing that grades the whole QA-agent pipeline — were
+# therefore only ever asserted on a developer's laptop. "4/4 caught" was a
+# local-only claim, and an app change that silently broke a planted-defect catch
+# would sail straight through the deploy gate.
+#
+# This job runs the FULL matrix (clean + DEFECT_MODE=1), reconciles the difference
+# against GROUND_TRUTH.md, and asserts the resulting scorecard is verdict-identical
+# to the canonical one — per-defect verdict AND attribution. It measures; it never
+# adjusts. Nothing here may add or edit a test to make a defect get caught, and
+# nothing here may edit the canonical scorecard to match a changed grade.
+#
+# ── NON-BLOCKING, deliberately ────────────────────────────────────────────────
+# This is a SEPARATE workflow, not a job in deploy.yml and not in
+# `build-and-push`'s `needs`. deploy.yml is byte-untouched. A red here is visible
+# and does not block a deploy. Promotion to blocking is a recorded human decision
+# with stated criteria (QA-agent repo BACKLOG.md → Phase 3.5): N consecutive green
+# runs on real pushes AND one deliberately-induced red proving it fails when it
+# should. A green job that has never been seen red proves nothing.
+#
+# ── PRIVATE REPO CHECKED OUT HERE — LOGS ARE PUBLIC ───────────────────────────
+# This repo is public; the QA-agent generator it checks out is PRIVATE. Everything
+# printed by a step in this workflow is world-readable. So:
+#   * the generator's pytest suite is NEVER run here (that is `tests.yml`'s job in
+#     the private repo, where its output belongs);
+#   * output is confined to runner/reconciler summaries and the job-summary table;
+#   * the checkout is contents:read only, and the token is scoped to that one repo.
+# Triggers are push + workflow_dispatch ONLY — no `pull_request`, so a fork PR can
+# reach neither the token nor the `beta` environment's seed credentials.
+#
+# ── PORTABILITY (this placement was a decision, not an accident) ──────────────
+# It lives here because the app, the specs, GROUND_TRUTH.md and the SHOPCHECK_*
+# seed secrets are all already here, and only a job in this repo claiming the
+# `beta` environment can read them (CLAUDE.md rule 4). The cost is the log
+# exposure noted above. If that ever bites, this YAML moves to the QA-agent repo —
+# where checking out THIS repo needs no credential at all, since it is public —
+# and the trade flips to duplicating the ten SHOPCHECK_* secrets and coupling to
+# that repo's schedule instead of this repo's pushes.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: defect-scorecard-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  scorecard:
+    name: Defect-detection scorecard (clean + DEFECT_MODE)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Claiming `beta` is what makes the SHOPCHECK_* environment secrets readable —
+    # the same mechanism `deploy.yml`'s gate uses. No credential literal anywhere.
+    environment: beta
+    env:
+      # The runner/reconciler paths make no LLM call at all, but load_dotenv() and
+      # os.getenv still run on import.
+      ANTHROPIC_API_KEY: "ci-dummy-key-not-used"
+      ANTHROPIC_MODEL: "claude-opus-4-8"
+      TOKENIZERS_PARALLELISM: "false"
+
+    steps:
+      - name: Checkout ShopCheck (app + specs + oracle)
+        uses: actions/checkout@v5
+
+      - name: Checkout the QA agent (PRIVATE — read-only, this repo only)
+        uses: actions/checkout@v5
+        with:
+          repository: ddahlin/QAAITESTArtifact
+          path: qa-agent
+          # Fine-grained PAT, contents:read, scoped to that repo alone. See the
+          # QA-agent repo's BACKLOG.md (Phase 3.5) for how it was minted and why the
+          # dispatch follow-on will need it upgraded to contents:write.
+          token: ${{ secrets.QA_AGENT_READ_PAT }}
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install ShopCheck's own dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install CPU-only PyTorch at the QA agent's locked version
+        # Version comes FROM the lock (one source of truth). The default PyPI linux
+        # wheel declares nvidia-* deps that --no-deps would not install, so `pip check`
+        # would then fail. Mirrors the QA-agent repo's own workflows.
+        working-directory: qa-agent
+        run: |
+          TORCH_PIN=$(grep -E '^torch==' requirements.txt)
+          echo "installing $TORCH_PIN from the CPU index"
+          python -m pip install --no-deps "$TORCH_PIN" \
+            --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install the QA agent from its locks (--no-deps + pip check)
+        # --no-deps + `pip check` is the completeness proof: anything the lock forgot
+        # to pin fails the build instead of being papered over by a resolver.
+        working-directory: qa-agent
+        run: |
+          python -m pip install --no-deps -r requirements.txt -r requirements-dev.txt
+          python -m pip check
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Install harness dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: Install Playwright browser (chromium)
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      # ── Expectation drift, before spending 20 minutes on an execution matrix ──
+      - name: Expectation-drift check (Phase 3.5)
+        working-directory: qa-agent
+        # `pipefail` is load-bearing: without it the pipeline's status is tee's, so a
+        # drift exit (2/3) would be swallowed and this step would pass green.
+        #
+        # The enriched TC-layer artifact is gitignored and absent on a hosted runner,
+        # so the two artifact-bearing checks annotate themselves NOT-RUN and the
+        # harness-side residency check runs for real. The report names every file it
+        # read, so a stale copy cannot pass quietly.
+        run: |
+          set -o pipefail
+          python main.py --check-expectations \
+            --harness-baseline "$GITHUB_WORKSPACE/e2e/generated-baseline.json" \
+            --ground-truth "$GITHUB_WORKSPACE/GROUND_TRUTH.md" \
+            --specs-dir "$GITHUB_WORKSPACE/e2e/tests/generated" \
+            | tee expectations.log
+
+      - name: Record what the expectation check could not verify
+        if: ${{ always() }}
+        working-directory: qa-agent
+        run: |
+          {
+            echo "## Expectation drift"
+            echo ""
+            echo '```'
+            sed -n '/Not checked/,$p' expectations.log 2>/dev/null || echo "(no log produced)"
+            echo '```'
+            echo ""
+            echo "_The TC-layer artifact is gitignored and absent in CI, so the two"
+            echo "artifact-bearing checks are annotated not-run — never as a pass._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── The full matrix: the runner owns server lifecycle per mode ────────────
+      - name: Run the clean + DEFECT_MODE execution matrix
+        working-directory: qa-agent
+        # No --artifacts: the TC-layer artifact is in neither repo, so the runner runs
+        # artifact-free and records `drift_checked: false` rather than implying it
+        # verified an expectation side it never saw. Writeback is skipped explicitly.
+        # The runner starts and stops the app itself per mode (DEFECT_MODE=0 then 1),
+        # which is exactly why the matrix cannot be inlined as YAML steps.
+        run: |
+          python main.py --run-specs \
+            --harness "$GITHUB_WORKSPACE/e2e" \
+            --app-root "$GITHUB_WORKSPACE" \
+            --test-path tests/generated \
+            --modes clean,defect \
+            --no-writeback \
+            --out-root "$GITHUB_WORKSPACE/spec_runs"
+        env:
+          CI: "true"
+          SHOPCHECK_BASE_URL: http://127.0.0.1:8000
+          # Seed credentials (APP_SPEC §12) — environment secrets, never literals.
+          SHOPCHECK_ADMIN: ${{ secrets.SHOPCHECK_ADMIN }}
+          SHOPCHECK_ADMIN_PASSWORD: ${{ secrets.SHOPCHECK_ADMIN_PASSWORD }}
+          SHOPCHECK_STANDARD_USER: ${{ secrets.SHOPCHECK_STANDARD_USER }}
+          SHOPCHECK_STANDARD_USER_PASSWORD: ${{ secrets.SHOPCHECK_STANDARD_USER_PASSWORD }}
+          SHOPCHECK_PROBLEM_USER: ${{ secrets.SHOPCHECK_PROBLEM_USER }}
+          SHOPCHECK_PROBLEM_USER_PASSWORD: ${{ secrets.SHOPCHECK_PROBLEM_USER_PASSWORD }}
+          SHOPCHECK_LOCKED_OUT_USER: ${{ secrets.SHOPCHECK_LOCKED_OUT_USER }}
+          SHOPCHECK_LOCKED_OUT_USER_PASSWORD: ${{ secrets.SHOPCHECK_LOCKED_OUT_USER_PASSWORD }}
+          SHOPCHECK_NEW_CUSTOMER: ${{ secrets.SHOPCHECK_NEW_CUSTOMER }}
+          SHOPCHECK_NEW_CUSTOMER_PASSWORD: ${{ secrets.SHOPCHECK_NEW_CUSTOMER_PASSWORD }}
+
+      - name: Locate the run session
+        id: session
+        run: |
+          SESSION=$(ls -1d "$GITHUB_WORKSPACE"/spec_runs/runs/*/ 2>/dev/null | sort | tail -1)
+          if [ -z "$SESSION" ]; then
+            echo "::error title=no run session::--run-specs produced no session directory."
+            exit 1
+          fi
+          echo "dir=${SESSION%/}" >> "$GITHUB_OUTPUT"
+          echo "session: ${SESSION%/}"
+
+      # ── The grade ────────────────────────────────────────────────────────────
+      - name: Assert the scorecard is verdict-identical to canonical
+        working-directory: qa-agent
+        # This reconciles ONCE and asserts the result, writing the same
+        # reconciliation_report.md that `--run-specs --reconcile` would produce — so
+        # the report is preserved without grading the run twice.
+        #
+        # Exit 2 = the grade changed. That is the signal this whole job exists for:
+        # a planted defect stopped being caught, or the attribution moved. NEVER
+        # "fix" it by editing scripts/canonical_scorecard.json to match.
+        run: |
+          python scripts/assert_scorecard.py \
+            --session "${{ steps.session.outputs.dir }}" \
+            --ground-truth "$GITHUB_WORKSPACE/GROUND_TRUTH.md" \
+            --specs-dir "$GITHUB_WORKSPACE/e2e/tests/generated" \
+            --expect scripts/canonical_scorecard.json \
+            --out "${{ steps.session.outputs.dir }}/reconciliation_report.md" \
+            --summary-md "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the reconciliation report + run session
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: defect-scorecard
+          path: |
+            spec_runs/runs/*/reconciliation_report.md
+            spec_runs/runs/*/summary.json
+            spec_runs/runs/*/manifest.json
+            spec_runs/runs/*/results_*.json
+            qa-agent/expectations.log
+          if-no-files-found: warn
+          retention-days: 14
