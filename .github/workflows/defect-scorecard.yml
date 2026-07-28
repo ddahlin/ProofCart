@@ -47,6 +47,20 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      generator_ref:
+        description: >-
+          QA-agent ref to grade against. `main` for every real run. Non-default
+          values exist for exactly one purpose: the deliberately-induced-red drill
+          the promotion criteria require. Without it this guard is UNFALSIFIABLE —
+          the canonical scorecard lives in the QA-agent repo, and with the checkout
+          pinned to its default branch there was no way to point the job at a
+          mutated copy without editing the real canonical on main. A drill must
+          never require touching the thing it is testing.
+          Safe by construction: the canonical is the EXPECTED side, so a wrong ref
+          can only ever manufacture a mismatch — it can never hide one.
+        required: false
+        default: main
 
 concurrency:
   group: defect-scorecard-${{ github.ref }}
@@ -78,6 +92,9 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: ddahlin/QAAITESTArtifact
+          # `main` on every push and on any dispatch that leaves the input alone
+          # (the `inputs` context is empty on a push event, so the fallback fires).
+          ref: ${{ inputs.generator_ref || 'main' }}
           path: qa-agent
           # Fine-grained PAT, contents:read, scoped to that repo alone. See the
           # QA-agent repo's BACKLOG.md (Phase 3.5) for how it was minted and why the
