@@ -63,7 +63,9 @@ exported OpenAPI document (`openapi.json`).
 | `/api/orders` | GET (customer: own; admin: all), POST (authenticated) | Mixed |
 | `/api/orders/{id}` | GET (owner or admin) | Mixed |
 | `/api/orders/{id}/status` | PATCH — drives the state machine below | Admin; customers may cancel their own orders only |
-| `/api/reports`, `/api/reports/{id}` | GET, POST, DELETE | Admin only |
+| `/api/reports` | GET, POST | Admin only |
+| `/api/reports/{id}/detail` | GET — one report with its stored payload | Admin only |
+| `/api/reports/{id}` | DELETE | Admin only |
 | `/api/reset` | POST | Test facility: drops and recreates seed data; unauthenticated by design, never deployed to production |
 
 ### Order state machine

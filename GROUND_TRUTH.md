@@ -131,9 +131,11 @@ clean — defects act only on live requests.
 
 ## 5. Incidental divergences and secondary findings
 
-BRD and HLD were frozen after authoring and have not been modified since
-implementation began. Beyond the deliberate plants (§2–§4), the following
-are registered:
+The BRD has never been modified since authoring. The HLD was frozen at
+authoring and has been modified **once**, for the deliberate API evolution
+registered in §5.5 — the CLAUDE.md rule-3 escape hatch, exercised knowingly and
+recorded here in the same commit. Beyond the deliberate plants (§2–§4), the
+following are registered:
 
 ### 5.1 Known minor divergence — order_items.product_id FK (docs vs code)
 
@@ -191,3 +193,29 @@ are registered:
   (`401` on credential failure, then `403` on lock). No defect, seed, or oracle
   behavior is involved or changed. `docs/openapi.json` (login description) and
   `APP_SPEC.md` (BR-8, §6, §7 endpoint table) encode the same precedence.
+
+### 5.5 Deliberate API evolution — report detail moves to `/api/reports/{id}/detail`
+
+- **What changed, and when:** `GET /api/reports/{report_id}` became
+  `GET /api/reports/{report_id}/detail` (2026-08-26). Nothing else moved: the
+  handler, its status codes, its response model, and the admin-only rule
+  (BR-9) are unchanged, and `DELETE /api/reports/{id}` keeps its path.
+- **Why it is recorded here:** this is the first change to a frozen document
+  since authoring. `CLAUDE.md` rule 3 freezes BRD/HLD and directs that code be
+  fixed rather than docs — with an escape hatch for an unavoidable doc change,
+  conditioned on updating this file in the same commit. A deliberate API
+  evolution is that case, so `docs/HLD.md` §4 and `APP_SPEC.md` §7 were moved
+  **with** the code rather than left to drift, and `docs/openapi.json` was
+  re-exported from the running app (rule 7).
+- **Requirement inventory: unchanged.** Still **26 functional requirements**.
+  FR-25 ("View reports") is a requirement about viewing a report, not about the
+  path it is served from; no FR, BR, or NFR was added, removed, or renumbered,
+  and no §1 location moved.
+- **Deliberate plants: untouched.** D1–D4 live in order totals, product delete,
+  the logout handler, and the discount threshold (§4). None of them is in the
+  reports area, no trigger or constant in §4 changed, and the seed is unchanged
+  — so this evolution cannot move any §4 verdict.
+- **Black-box impact:** an agent reading only `docs/` sees a consistent
+  contract, as before. The change is visible in the HLD endpoint table and the
+  exported OpenAPI document, which is exactly where an API change should be
+  visible.

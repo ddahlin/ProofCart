@@ -247,7 +247,8 @@ into docstrings — they become the spec text).
 | `/api/orders/{id}` | GET | 200 | 401 · 403 not-owner (customer) · 404 |
 | `/api/orders/{id}/status` | PATCH | 200 | 401 · 403 (customer may only cancel own order; all other transitions admin-only) · 404 · 409 illegal transition or insufficient stock · 422 unknown status value |
 | `/api/reports` | GET/POST (admin) | 200 / 201 | 401 · 403 (BR-9) · 422 bad date range (`date_from > date_to`) |
-| `/api/reports/{id}` | GET/DELETE (admin) | 200 / 204 | 401 · 403 · 404 |
+| `/api/reports/{id}/detail` | GET (admin) | 200 | 401 · 403 · 404 |
+| `/api/reports/{id}` | DELETE (admin) | 204 | 401 · 403 · 404 |
 | `/api/reset` | POST | 200 `{"status":"reset"}` | — (documented as test-only; no auth required) |
 
 Validation errors use FastAPI's standard `422` shape; business conflicts use

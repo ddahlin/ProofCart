@@ -105,7 +105,7 @@ def create_report(body: ReportCreate,
 
 
 @router.get(
-    "/{report_id}",
+    "/{report_id}/detail",
     response_model=ReportOut,
     responses={
         **_ADMIN_RESPONSES,

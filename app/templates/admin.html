@@ -138,7 +138,7 @@
         '<td><button class="secondary" data-act="view" type="button">View</button> ' +
         '<button class="danger" data-act="del" type="button">Delete</button></td>';
       tr.querySelector('[data-act="view"]').addEventListener('click', async () => {
-        const full = await api('/api/reports/' + r.id);
+        const full = await api('/api/reports/' + r.id + '/detail');
         document.getElementById('report-payload').textContent =
           JSON.stringify(full.payload, null, 2);
       });

@@ -6,7 +6,7 @@ def test_list_reports_admin(admin):
 
 def test_reports_forbidden_for_customer(customer):
     assert customer.get("/api/reports").status_code == 403
-    assert customer.get("/api/reports/1").status_code == 403
+    assert customer.get("/api/reports/1/detail").status_code == 403
     assert customer.delete("/api/reports/1").status_code == 403
     resp = customer.post("/api/reports", json={
         "title": "X", "type": "inventory",
@@ -17,7 +17,7 @@ def test_reports_forbidden_for_customer(customer):
 def test_reports_require_auth(api):
     anon = api()
     assert anon.get("/api/reports").status_code == 401
-    assert anon.get("/api/reports/1").status_code == 401
+    assert anon.get("/api/reports/1/detail").status_code == 401
     assert anon.delete("/api/reports/1").status_code == 401
     assert anon.post("/api/reports", json={}).status_code == 401
 
@@ -53,7 +53,7 @@ def test_report_payload_is_snapshot_not_live(admin):
     admin.put("/api/products/3", json={"name": "Wireless Mouse",
                                        "description": "", "price": 24.99,
                                        "stock": 0, "is_active": True})
-    payload = admin.get(f"/api/reports/{report_id}").json()["payload"]
+    payload = admin.get(f"/api/reports/{report_id}/detail").json()["payload"]
     assert payload["out_of_stock_product_ids"] == [5]
 
 
@@ -72,7 +72,7 @@ def test_create_report_unknown_type_422(admin):
 
 
 def test_get_and_delete_report(admin):
-    assert admin.get("/api/reports/1").status_code == 200
+    assert admin.get("/api/reports/1/detail").status_code == 200
     assert admin.delete("/api/reports/1").status_code == 204
-    assert admin.get("/api/reports/1").status_code == 404
+    assert admin.get("/api/reports/1/detail").status_code == 404
     assert admin.delete("/api/reports/1").status_code == 404
