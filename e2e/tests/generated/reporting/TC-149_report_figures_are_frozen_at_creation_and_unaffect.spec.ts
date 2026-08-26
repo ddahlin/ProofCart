@@ -11,6 +11,6 @@ test('TC-149: Report figures are frozen at creation and unaffected by later data
   const createdReportId = (await res.json()).id;
   // seeded order 1 (pending, owned by standard_user) — deterministic closed-set pick
   await api.patch('/api/orders/1/status', { data: { status: 'paid' } });
-  await api.get(`/api/reports/${createdReportId}`);
+  await api.get(`/api/reports/${createdReportId}/detail`);
   // Expected: stored figures remain unchanged (snapshot at creation)
 });

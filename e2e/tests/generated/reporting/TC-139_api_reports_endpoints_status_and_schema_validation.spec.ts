@@ -17,8 +17,8 @@ test('TC-139: API - reports endpoints status and schema validation across roles'
   await loginAs('admin');  // auth=admin variation
   const reports: { id: number }[] = await (await api.get('/api/reports')).json();
   const reportId = reports[0].id;  // first seeded report
-  const res3 = await api.get(`/api/reports/${reportId}`);
+  const res3 = await api.get(`/api/reports/${reportId}/detail`);
   expect(res3.status()).toBe(200);
-  const res4 = await api.get('/api/reports/999999');
+  const res4 = await api.get('/api/reports/999999/detail');
   expect(res4.status()).toBe(404);
 });
