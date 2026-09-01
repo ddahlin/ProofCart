@@ -1,7 +1,7 @@
 # `QA_AGENT_READ_PAT` — creation steps
 
 The `defect-scorecard` workflow checks out the **private** QA-agent generator
-(`ddahlin/QAAITESTArtifact`). This repo's ephemeral `GITHUB_TOKEN` cannot read another
+(`ddahlin/Assay`). This repo's ephemeral `GITHUB_TOKEN` cannot read another
 private repository, so that checkout needs a token. This file records exactly how it is
 scoped and why — least privilege now, deliberately.
 
@@ -14,7 +14,7 @@ scoped and why — least privilege now, deliberately.
 | **Token name** | `QA_AGENT_READ_PAT` (or `shopcheck-ci-reads-qa-agent`) |
 | **Resource owner** | `ddahlin` |
 | **Expiration** | 90 days (calendar a renewal — an expired token fails the checkout, which reads as a red scorecard job) |
-| **Repository access** | **Only select repositories** → `ddahlin/QAAITESTArtifact` |
+| **Repository access** | **Only select repositories** → `ddahlin/Assay` |
 | **Permissions** → Repository permissions | **Contents: Read-only** — and nothing else |
 
 Leave every other permission at *No access*. In particular do **not** grant Actions,

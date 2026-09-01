@@ -91,7 +91,7 @@ jobs:
       - name: Checkout the QA agent (PRIVATE — read-only, this repo only)
         uses: actions/checkout@v5
         with:
-          repository: ddahlin/QAAITESTArtifact
+          repository: ddahlin/Assay
           # `main` on every push and on any dispatch that leaves the input alone
           # (the `inputs` context is empty on a push event, so the fallback fires).
           ref: ${{ inputs.generator_ref || 'main' }}
