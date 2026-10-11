@@ -7,6 +7,9 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
+# Local virtualenv (built from requirements.txt + constraints.txt)
+.venv/
+
 # UI-model exporter output (regenerable build_artifact; canonical copy is
 # delivered into the QA repo's kb/product_knowledge/ui_model/)
 out/

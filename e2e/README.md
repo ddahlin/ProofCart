@@ -100,7 +100,7 @@ from the process exit code + that JSON file. Nothing here parses log text or
 
 ```bash
 # terminal 1 — the app (from the repo root)
-pip install -r requirements.txt
+pip install -r requirements.txt -c constraints.txt
 uvicorn app.main:app                    # http://localhost:8000
 
 # terminal 2 — the harness

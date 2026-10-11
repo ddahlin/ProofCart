@@ -4,6 +4,7 @@ __pycache__/
 .git/
 tests/
 .pytest_cache/
+.venv/
 
 # Build/eval layer — not needed by the runtime image. APP_SPEC.md and CLAUDE.md
 # document the planted defects (D1–D4), so they must never ride along in a

@@ -11,7 +11,8 @@ authoritative build instruction set — read it fully before any change.
 
 ## Commands
 ```bash
-pip install -r requirements.txt
+python3.11 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt -c constraints.txt   # constraints.txt pins the closure
 uvicorn app.main:app --reload          # run app  → http://localhost:8000
 pytest -q                              # full suite must stay green
 curl -X POST localhost:8000/api/reset  # restore deterministic seed data

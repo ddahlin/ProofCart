@@ -111,7 +111,7 @@ jobs:
       - name: Install ShopCheck's own dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt -c constraints.txt
 
       - name: Install CPU-only PyTorch at the QA agent's locked version
         # Version comes FROM the lock (one source of truth). The default PyPI linux
