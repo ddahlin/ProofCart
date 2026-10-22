@@ -3,6 +3,7 @@
 # Raised the same day past their advisories: anyio and starlette to the minimal fix,
 # soupsieve to 2.10, the version the QA agent's lock resolves, so shared pins stay identical.
 # pytest stays 8.4.2: its fix (9.0.3) is outside requirements.txt's <9.0 range.
+# Raised 2026-10-22: certifi to 2026.10.19, past PYSEC-2026-4320, the QA agent's lock pin.
 # requirements.txt keeps the ranges; this file chooses the versions inside them:
 #   pip install -r requirements.txt -c constraints.txt
 # A constraint pins only what it names. A dependency added to requirements.txt floats
@@ -11,7 +12,7 @@ annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.14.2
 beautifulsoup4==4.15.0
-certifi==2026.7.22
+certifi==2026.10.19
 click==8.4.1
 fastapi==0.136.3
 h11==0.16.0
