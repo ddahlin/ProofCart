@@ -22,8 +22,21 @@
 # Entries are the owner's call. A version bump clears an advisory; this file
 # only records an advisory deliberately left in place. It should shrink, never
 # grow silently.
-#
-# As of 2026-10-22 this file has no entries, and the job is red on one
-# advisory pending an owner ruling: pytest 8.4.2, PYSEC-2026-1845 (fixed in
-# 9.0.3, outside requirements.txt's pytest<9.0). The ruling is either an entry
-# here or the pytest 9 move.
+
+# 2026-10-22 · pytest 8.4.2 · PYSEC-2026-1845 (CVE-2025-71176, GHSA-6w46-j5rx-g56g) · medium
+#   pytest before 9.0.3 relies on the predictable /tmp/pytest-of-{user}
+#   directory on UNIX, which lets another local user cause a denial of service
+#   or possibly gain privileges (GitHub: CVSS 6.8, local attack vector). The
+#   fix, 9.0.3, is a major version, outside requirements.txt's pytest<9.0, and
+#   pytest stays at 8.4.2 in both repos until a coordinated pytest 9 move (see
+#   97cb9c7). The QA agent's ignore file carries the same ID.
+#   Why it is accepted: the exposure needs a shared multi-user UNIX host. The
+#   suite runs only on ephemeral, single-tenant GitHub-hosted runners and on a
+#   single-user dev Mac. pytest also ships, unused, in the published image (F-104
+#   in the QA agent's BACKLOG.md), which never runs tests. Running the suite on
+#   a shared host re-opens this. Decided by the owner, 2026-10-22, option (a):
+#   accept it with this entry rather than move to pytest 9 now.
+#   What deletes it: the coordinated pytest 9 move (F-103 in the QA agent's
+#   BACKLOG.md), which raises pytest to 9.0.3, or pytest leaving the installed
+#   closure. F-104's image split alone does not: constraints.txt still pins it.
+PYSEC-2026-1845
