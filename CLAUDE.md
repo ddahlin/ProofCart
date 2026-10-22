@@ -18,6 +18,13 @@ pytest -q                              # full suite must stay green
 curl -X POST localhost:8000/api/reset  # restore deterministic seed data
 ```
 
+**Dependency advisories.** `.github/workflows/audit.yml` runs pip-audit on push, on pull
+requests and weekly. It audits `constraints.txt` as written and each `requirements*.txt` as
+installed, resolved through `constraints.txt`. The job fails on any advisory not listed in
+`.pip-audit-ignore.txt`, and on any listed entry that matches no live advisory. Clear an
+advisory by raising its pin here. Ignore entries are dated, reasoned and the owner's call:
+never add one to turn the job green.
+
 ## Non-negotiable rules
 
 1. **Document layers are strictly separated.**

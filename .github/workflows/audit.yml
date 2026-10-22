@@ -1,0 +1,121 @@
+name: audit
+
+# Dependency advisories in ShopCheck's own Python dependencies.
+#
+# A workflow of its own, for two reasons:
+#   * It runs on a schedule as well as on push. An advisory is published against
+#     a pin that has not changed: certifi 2026.7.22 went critical with no push
+#     here to flag it, and this repo can go weeks between pushes.
+#   * It neither gates nor triggers deploy.yml. No job anywhere `needs` this one,
+#     and no workflow listens for it.
+#
+# Modelled on the QA agent's `audit` job (tests.yml): the same scanner version,
+# the same ignore-file expansion, and the same rule that any advisory not listed
+# in .pip-audit-ignore.txt fails. It differs in two ways:
+#   * Every dependency file is audited and the step fails once, at the end, so
+#     one red file cannot hide another. That job stops at the first red lock.
+#   * A dead ignore entry fails the job. That job leaves this check to a human.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "23 6 * * 1"   # Mondays 06:23 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: pip-audit (every dependency file)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install pip-audit (its own venv, pinned)
+        # The QA agent's dev lock pins the same version. pip-audit audits requirement
+        # FILES, so its own dependencies, kept in their own venv, are never under audit.
+        run: |
+          python -m venv "$RUNNER_TEMP/pip-audit"
+          "$RUNNER_TEMP/pip-audit/bin/python" -m pip install --quiet pip-audit==2.10.1
+          echo "$RUNNER_TEMP/pip-audit/bin" >> "$GITHUB_PATH"
+
+      - name: Audit every dependency file
+        # constraints.txt pins the whole closure, so it is audited exactly as written
+        # (--no-deps). Each requirements*.txt is audited as it is installed: resolved
+        # through constraints.txt, which pip-audit's own pip inherits from
+        # PIP_CONSTRAINT. That catches a dependency that floats because constraints.txt
+        # does not pin it yet. Auditing requirements.txt WITHOUT the constraints is not a
+        # substitute: the resolver picks the newest release in each range, which would
+        # have hidden certifi 2026.7.22. --strict fails the audit when a dependency
+        # cannot be audited, since an unaudited dependency is not a clean one.
+        #
+        # Fails on any advisory not listed in .pip-audit-ignore.txt. To clear one, raise
+        # the package past it. Entries are the owner's call; see that file.
+        run: |
+          IGNORES=$(awk '{sub(/#.*/,"")} NF {print "--ignore-vuln", $1}' .pip-audit-ignore.txt | tr '\n' ' ')
+          status=0
+          echo "::group::pip-audit constraints.txt (--no-deps: every pin as written)"
+          pip-audit -r constraints.txt --no-deps --strict --progress-spinner off $IGNORES \
+            || { status=1; echo "::error title=pip-audit::constraints.txt"; }
+          echo "::endgroup::"
+          for req in requirements*.txt; do
+            echo "::group::pip-audit $req (resolved through constraints.txt, as installed)"
+            PIP_CONSTRAINT="$PWD/constraints.txt" pip-audit -r "$req" --strict --progress-spinner off $IGNORES \
+              || { status=1; echo "::error title=pip-audit::$req"; }
+            echo "::endgroup::"
+          done
+          exit $status
+
+      - name: Ratchet — no dead ignore entries
+        # A dead entry hides nothing today and would hide a regression back into the
+        # range tomorrow. Liveness is read from an audit with NO ignores, by ID or by
+        # alias, because pip-audit's --ignore-vuln matches either. This step runs even
+        # when the one above is red. It fails closed when an audit produced no result,
+        # because then no entry can be shown to be live.
+        if: ${{ !cancelled() }}
+        run: |
+          raw="$RUNNER_TEMP/raw-audit"
+          mkdir -p "$raw"
+          awk '{sub(/#.*/,"")} NF {print $1}' .pip-audit-ignore.txt > "$raw/entries.txt"
+          pip-audit -r constraints.txt --no-deps --strict --progress-spinner off \
+            -f json -o "$raw/constraints.txt.json" || true
+          for req in requirements*.txt; do
+            PIP_CONSTRAINT="$PWD/constraints.txt" pip-audit -r "$req" --strict --progress-spinner off \
+              -f json -o "$raw/$req.json" || true
+          done
+          python3 - "$raw" constraints.txt requirements*.txt <<'PY'
+          import json, pathlib, sys
+          raw = pathlib.Path(sys.argv[1])
+          files = sys.argv[2:]
+          entries = (raw / "entries.txt").read_text().split()
+          live = set()
+          for name in files:
+              try:
+                  deps = json.loads((raw / f"{name}.json").read_text())["dependencies"]
+              except (OSError, ValueError, KeyError) as exc:
+                  print(f"::error title=ratchet::{name}: no audit result ({exc}), so no entry can be shown live")
+                  sys.exit(1)
+              for dep in deps:
+                  for vuln in dep.get("vulns", []):
+                      live.add(vuln["id"])
+                      live.update(vuln.get("aliases", []))
+          dead = [e for e in entries if e not in live]
+          print(f"{len(entries)} ignore entries; {len(live)} live advisory IDs and aliases in {', '.join(files)}")
+          for e in dead:
+              print(f"::error title=dead ignore entry::{e} matches no live advisory ID or alias. Delete it.")
+          sys.exit(1 if dead else 0)
+          PY

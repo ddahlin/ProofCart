@@ -1,0 +1,29 @@
+# pip-audit ignore list for ShopCheck's own Python dependencies.
+#
+# One advisory ID per line; `#` comments and blank lines are ignored.
+# .github/workflows/audit.yml expands each line into `--ignore-vuln <ID>`, so
+# the audit fails on any advisory NOT listed here.
+#
+# EVERY ENTRY is dated and reasoned, in a comment block directly above it:
+#   # YYYY-MM-DD · <package> <installed version> · <ID> (<aliases>) · <severity>
+#   #   Why it is accepted: reachability, and who decided.
+#   #   What deletes it: normally the release that leaves the affected range.
+#   <ID>
+# An entry stays only while the installed version is inside the advisory's
+# affected range. "No fix yet" is a reason to keep an entry INSIDE the range,
+# never outside it.
+#
+# DEAD ENTRIES FAIL THE JOB. An entry that matches no live advisory hides
+# nothing today and would hide a regression back into the range tomorrow, so
+# audit.yml's ratchet step fails on it. Delete it in the change that leaves the
+# range. pip-audit matches an entry against an advisory's aliases too, so an
+# entry counts as live when it equals a live advisory's ID or any of its aliases.
+#
+# Entries are the owner's call. A version bump clears an advisory; this file
+# only records an advisory deliberately left in place. It should shrink, never
+# grow silently.
+#
+# As of 2026-10-22 this file has no entries, and the job is red on one
+# advisory pending an owner ruling: pytest 8.4.2, PYSEC-2026-1845 (fixed in
+# 9.0.3, outside requirements.txt's pytest<9.0). The ruling is either an entry
+# here or the pytest 9 move.
